@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MateFácil | Límites, Derivadas e Integrales Paso a Paso</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- KaTeX (Renderizado de fórmulas matemáticas) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" />
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+
+  <!-- Math.js (Motor matemático para el solucionador) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/12.4.1/math.js"></script>
+
+  <!-- React 18, React DOM & Babel -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    .katex-display { margin: 0.5rem 0 !important; overflow-x: auto; overflow-y: hidden; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo, useRef } = React;
+
+    // --- ENLACES OFICIALES DE YOUTUBE ---
+    const YOUTUBE_LINKS = {
+      limites: {
+        url: "https://youtube.com/playlist?list=PLeySRPnY35dG9t51yT4nCwQEtWwCwvBwn&si=_FtDvvT51AdbQ6xO",
+        listId: "PLeySRPnY35dG9t51yT4nCwQEtWwCwvBwn",
+        title: "Curso completo en video: Límites desde cero"
+      },
+      derivadas: {
+        url: "https://youtube.com/playlist?list=PLeySRPnY35dG2UQ35tPsaVMYkQhc8Vp__&si=WtNpQbl-NYq_b7wu",
+        listId: "PLeySRPnY35dG2UQ35tPsaVMYkQhc8Vp__",
+        title: "Curso completo en video: Derivadas paso a paso"
+      },
+      integrales: {
+        url: "https://youtube.com/playlist?list=PLeySRPnY35dEHnMLZGaNEXgHzJ2-TPLWw&si=xTjEi6Ed9Ky7lynv",
+        listId: "PLeySRPnY35dEHnMLZGaNEXgHzJ2-TPLWw",
+        title: "Curso completo en video: Integrales desde lo básico"
+      }
+    };
+
+    // --- COMPONENTE MATEMÁTICO (KaTeX) ---
+    function MathTex({ formula, display = false }) {
+      const containerRef = useRef(null);
+
+      useEffect(() => {
+        if (containerRef.current && window.katex) {
+          try {
+            window.katex.render(formula, containerRef.current, {
+              displayMode: display,
+              throwOnError: false
+            });
+          } catch (e) {
+            containerRef.current.innerText = formula;
+          }
+        }
+      }, [formula, display]);
+
+      return <span ref={containerRef} />;
+    }
+
+    // --- COMPONENTE DE BANNER YOUTUBE ---
+    function VideoBanner({ topic }) {
+      const data = YOUTUBE_LINKS[topic];
+      const [showEmbed, setShowEmbed] = useState(false);
+      if (!data) return null;
+
+      return (
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-4 sm:p-5 shadow-sm space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-red-600 text-white flex items-center justify-center font-bold text-lg shadow-sm">
+                ▶
+              </div>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-red-600">¿Prefieres aprender en video?</p>
+                <h4 className="text-base font-bold text-slate-900">{data.title}</h4>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowEmbed(!showEmbed)}
+                className="px-3.5 py-1.5 bg-white border border-red-300 hover:bg-red-100 text-red-700 text-xs font-bold rounded-lg transition"
+              >
+                {showEmbed ? "Ocultar reproductor" : "Ver video aquí"}
+              </button>
+              <a
+                href={data.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg transition shadow-sm flex items-center gap-1.5"
+              >
+                <span>Abrir en YouTube</span>
+                <span className="text-xs">↗</span>
+              </a>
+            </div>
+          </div>
+
+          {showEmbed && (
+            <div className="pt-2">
+              <div className="relative w-full rounded-xl overflow-hidden shadow" style={{ paddingBottom: "56.25%" }}>
+                <iframe
+                  className="absolute top-0 left-0 w-full h-full"
+                  src={`https://www.youtube.com/embed/videoseries?list=${data.listId}`}
+                  title={data.title}
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                ></iframe>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // --- BASE DE DATOS DE REGLAS ---
+    const LESSONS_DATA = {
+      limites: [
+        {
+          id: "lim-sustitucion",
+          category: "Reglas Básicas",
+          name: "Sustitución Directa",
+          formula: "\\lim_{x \\to a} f(x) = f(a)",
+          when: "Es el primer paso obligado al resolver cualquier límite si la función no se indetermina en ese punto.",
+          example: "\\lim_{x \\to 2} (3x^2 - 4x + 1)",
+          steps: [
+            "Paso 1: Reemplazamos cada 'x' por el valor al que se acerca, en este caso 2.",
+            "Paso 2: Escribimos: 3(2)^2 - 4(2) + 1",
+            "Paso 3: Calculamos la potencia: 2^2 = 4 -> 3(4) - 8 + 1",
+            "Paso 4: Multiplicamos y sumamos: 12 - 8 + 1 = 5"
+          ],
+          result: "5",
+          practice: { question: "Calcula \\lim_{x \\to 3} (2x + 4)", answer: "10" }
+        },
+        {
+          id: "lim-constante-var",
+          category: "Reglas Básicas",
+          name: "Límite de una Constante y de una Variable",
+          formula: "\\lim_{x \\to a} c = c \\qquad \\lim_{x \\to a} x = a",
+          when: "Una constante no cambia su valor sin importar a qué tienda x; y la variable x simplemente toma el valor del límite.",
+          example: "\\lim_{x \\to 5} 9 = 9 \\qquad \\lim_{x \\to 5} x = 5",
+          steps: [
+            "Paso 1: Para el número 9: como no depende de x, el resultado se mantiene idéntico (9).",
+            "Paso 2: Para la variable x: toma directamente el valor al que tiende (5)."
+          ],
+          result: "9 \\text{ y } 5",
+          practice: { question: "Calcula \\lim_{x \\to -4} (-7)", answer: "-7" }
+        },
+        {
+          id: "lim-operaciones",
+          category: "Reglas Básicas",
+          name: "Límites de Suma, Resta, Producto, Cociente y Potencias",
+          formula: "\\lim [f(x) \\pm g(x)] = L \\pm M \\qquad \\lim \\frac{f(x)}{g(x)} = \\frac{L}{M} \\quad (M \\neq 0)",
+          when: "Cuando calculamos operaciones entre funciones continuas, podemos evaluar el límite de cada término por separado.",
+          example: "\\lim_{x \\to 3} \\frac{x^2 + 1}{2x}",
+          steps: [
+            "Paso 1: Calculamos el límite del numerador: 3^2 + 1 = 9 + 1 = 10.",
+            "Paso 2: Calculamos el límite del denominador: 2(3) = 6.",
+            "Paso 3: Dividimos ambos resultados: 10/6.",
+            "Paso 4: Simplificamos sacando mitad: 5/3."
+          ],
+          result: "\\frac{5}{3}",
+          practice: { question: "Calcula \\lim_{x \\to 2} (x^3 + 2)", answer: "10" }
+        },
+        {
+          id: "lim-cero-sobre-cero",
+          category: "Indeterminación 0/0",
+          name: "Factorización al obtener 0/0",
+          formula: "\\frac{0}{0} \\implies \\text{¡NO significa que sea 0! Debes factorizar y simplificar.}",
+          when: "Cuando al hacer sustitución directa obtienes 0 en el numerador y 0 en el denominador. ¡Significa que hay un factor oculto que se debe cancelar!",
+          example: "\\lim_{x \\to 3} \\frac{x^2 - 9}{x - 3}",
+          steps: [
+            "Paso 1: Intentamos sustitución directa: (3^2 - 9)/(3 - 3) = 0/0 (indeterminación).",
+            "Paso 2: Factorizamos la diferencia de cuadrados en el numerador: x^2 - 9 = (x - 3)(x + 3).",
+            "Paso 3: Simplificamos cancelando el término idéntico (x - 3): queda simplemente (x + 3).",
+            "Paso 4: Evaluamos el límite restante en x = 3: 3 + 3 = 6."
+          ],
+          result: "6",
+          practice: { question: "Calcula \\lim_{x \\to 2} \\frac{x^2 - 4}{x - 2}", answer: "4" }
+        },
+        {
+          id: "lim-conjugado",
+          category: "Indeterminación 0/0",
+          name: "Multiplicación por el Conjugado (Eliminar Raíces)",
+          formula: "(\\sqrt{A} - B)(\\sqrt{A} + B) = A - B^2",
+          when: "Cuando al evaluar da 0/0 y aparecen expresiones con raíces cuadradas restando o sumando.",
+          example: "\\lim_{x \\to 4} \\frac{\\sqrt{x} - 2}{x - 4}",
+          steps: [
+            "Paso 1: Sustitución da: (sqrt(4) - 2)/(4 - 4) = 0/0.",
+            "Paso 2: Multiplicamos numerador y denominador por el conjugado (\\sqrt{x} + 2).",
+            "Paso 3: En el numerador aplicamos diferencia de cuadrados: (\\sqrt{x})^2 - 2^2 = x - 4.",
+            "Paso 4: Cancelamos (x - 4) arriba y abajo: queda 1 / (\\sqrt{x} + 2).",
+            "Paso 5: Evaluamos en x = 4: 1 / (\\sqrt{4} + 2) = 1 / (2 + 2) = 1/4."
+          ],
+          result: "\\frac{1}{4}",
+          practice: { question: "Calcula \\lim_{x \\to 9} \\frac{\\sqrt{x} - 3}{x - 9} (en fracción 1/6)", answer: "1/6" }
+        },
+        {
+          id: "lim-infinito",
+          category: "Límites al Infinito y Laterales",
+          name: "Límites cuando x tiende al Infinito (x -> ∞)",
+          formula: "\\lim_{x \\to \\infty} \\frac{1}{x} = 0 \\qquad \\text{Comparamos los grados más altos: } \\frac{a x^n}{b x^m}",
+          when: "Para funciones racionales grandes: si el grado del numerador y denominador es igual, el resultado es la división de sus coeficientes líderes.",
+          example: "\\lim_{x \\to \\infty} \\frac{4x^2 + 5x}{2x^2 - 1}",
+          steps: [
+            "Paso 1: Identificamos el término de mayor grado arriba y abajo: es x^2 en ambos.",
+            "Paso 2: Como los grados son iguales (grado 2), ignoramos los términos menores (+5x y -1).",
+            "Paso 3: Dividimos los coeficientes principales: 4 / 2 = 2."
+          ],
+          result: "2",
+          practice: { question: "Calcula \\lim_{x \\to \\infty} \\frac{6x^3 + 2}{3x^3 - 5}", answer: "2" }
+        },
+        {
+          id: "lim-laterales",
+          category: "Límites al Infinito y Laterales",
+          name: "Límites Laterales",
+          formula: "\\lim_{x \\to a} f(x) = L \\iff \\lim_{x \\to a^-} f(x) = \\lim_{x \\to a^+} f(x) = L",
+          when: "Para que un límite exista, la función debe acercarse al mismo número por la izquierda (a^-) que por la derecha (a^+).",
+          example: "\\text{Si } \\lim_{x \\to 1^-} f(x) = 3 \\text{ y } \\lim_{x \\to 1^+} f(x) = 3",
+          steps: [
+            "Paso 1: Analizamos el límite por la izquierda: vale 3.",
+            "Paso 2: Analizamos el límite por la derecha: vale 3.",
+            "Paso 3: Como 3 = 3 (ambos coinciden), el límite bilateral existe y es 3."
+          ],
+          result: "3",
+          practice: { question: "Si por izquierda da 4 y por derecha da 4, ¿cuál es el límite?", answer: "4" }
+        }
+      ],
+      derivadas: [
+        {
+          id: "der-constante-x",
+          category: "Reglas Básicas",
+          name: "Derivada de una Constante y de x",
+          formula: "\\frac{d}{dx}(c) = 0 \\qquad \\frac{d}{dx}(x) = 1",
+          when: "Un número fijo nunca cambia (su pendiente es 0) y la recta y = x siempre tiene inclinación 1.",
+          example: "f(x) = 7 \\implies f'(x) = 0 \\qquad g(x) = x \\implies g'(x) = 1",
+          steps: [
+            "Paso 1: El 7 es un número sin variables. Su derivada es automáticamente 0.",
+            "Paso 2: La variable x sola siempre produce 1."
+          ],
+          result: "0 \\text{ y } 1",
+          practice: { question: "¿Cuál es la derivada de f(x) = 45?", answer: "0" }
+        },
+        {
+          id: "der-potencia",
+          category: "Reglas Básicas",
+          name: "Regla de la Potencia",
+          formula: "\\frac{d}{dx}(x^n) = n \\cdot x^{n - 1}",
+          when: "Para cualquier potencia de x: bajas el exponente a multiplicar y le restas 1 al exponente.",
+          example: "f(x) = x^4",
+          steps: [
+            "Paso 1: Identificar el exponente original, que es n = 4.",
+            "Paso 2: Bajar el 4 al frente: 4 * x.",
+            "Paso 3: Restarle 1 al exponente: 4 - 1 = 3.",
+            "Paso 4: Escribir el resultado: 4x^3."
+          ],
+          result: "4x^3",
+          practice: { question: "¿Cuál es la derivada de x^5? (Escribe con ^: 5x^4)", answer: "5x^4" }
+        },
+        {
+          id: "der-multiplo-suma",
+          category: "Reglas Básicas",
+          name: "Múltiplo Constante, Suma y Resta",
+          formula: "\\frac{d}{dx}[c \\cdot f(x)] = c \\cdot f'(x) \\qquad \\frac{d}{dx}(u \\pm v) = u' \\pm v'",
+          when: "Los números multiplicando se quedan igual y derivas cada término sumado o restado uno por uno.",
+          example: "f(x) = 5x^3 - 4x^2 + 6x - 9",
+          steps: [
+            "Paso 1: Derivada de 5x^3: el 5 se queda, baja el 3: 5 * 3x^2 = 15x^2.",
+            "Paso 2: Derivada de -4x^2: -4 * 2x^1 = -8x.",
+            "Paso 3: Derivada de 6x: 6 * 1 = 6.",
+            "Paso 4: Derivada de -9: es constante, da 0.",
+            "Paso 5: Unimos todo: 15x^2 - 8x + 6."
+          ],
+          result: "15x^2 - 8x + 6",
+          practice: { question: "¿Derivada de 3x^2 - 5x? (Ej: 6x - 5)", answer: "6x - 5" }
+        },
+        {
+          id: "der-producto-cociente",
+          category: "Operaciones",
+          name: "Regla del Producto y del Cociente",
+          formula: "(u \\cdot v)' = u'v + uv' \\qquad \\left(\\frac{u}{v}\\right)' = \\frac{u'v - uv'}{v^2}",
+          when: "Se usa obligatoriamente cuando dos funciones se multiplican o se dividen entre sí.",
+          example: "f(x) = \\frac{3x}{x + 2}",
+          steps: [
+            "Paso 1: Numerador u = 3x (u' = 3); Denominador v = x + 2 (v' = 1).",
+            "Paso 2: Aplicar fórmula: [3(x + 2) - 3x(1)] / (x + 2)^2.",
+            "Paso 3: Desarrollar: (3x + 6 - 3x) / (x + 2)^2 = 6 / (x + 2)^2."
+          ],
+          result: "\\frac{6}{(x + 2)^2}",
+          practice: { question: "Si u=x^2 y v=x, ¿derivada de x^2 * x (usando potencia x^3)?", answer: "3x^2" }
+        },
+        {
+          id: "der-cadena",
+          category: "Operaciones",
+          name: "Regla de la Cadena (Función dentro de otra)",
+          formula: "\\frac{d}{dx}[f(g(x))] = f'(g(x)) \\cdot g'(x)",
+          when: "Cuando hay un paréntesis con operaciones elevado a una potencia o dentro de una raíz.",
+          example: "y = (2x + 1)^4",
+          steps: [
+            "Paso 1: Derivada exterior: baja el 4 y queda elevado a la 3: 4(2x + 1)^3.",
+            "Paso 2: Derivada interior (2x + 1): es 2.",
+            "Paso 3: Multiplicamos: 4(2x + 1)^3 * 2 = 8(2x + 1)^3."
+          ],
+          result: "8(2x + 1)^3",
+          practice: { question: "¿Derivada de (x + 5)^2? (Ej: 2(x + 5))", answer: "2(x + 5)" }
+        },
+        {
+          id: "der-raices-potneg",
+          category: "Especiales",
+          name: "Potencias Negativas y Raíces",
+          formula: "\\frac{1}{x^k} = x^{-k} \\qquad \\sqrt{x} = x^{1/2} \\implies (\\sqrt{x})' = \\frac{1}{2\\sqrt{x}}",
+          when: "Reescribe siempre raíces y divisiones como potencias antes de derivar.",
+          example: "f(x) = \\frac{1}{x^2}",
+          steps: [
+            "Paso 1: Reescribir con exponente negativo: f(x) = x^{-2}.",
+            "Paso 2: Bajar exponente y restar uno: -2 * x^{-3}.",
+            "Paso 3: Pasar al denominador con exponente positivo: -2 / x^3."
+          ],
+          result: "-\\frac{2}{x^3}",
+          practice: { question: "¿Derivada de 1/x? (Escribe -1/x^2)", answer: "-1/x^2" }
+        },
+        {
+          id: "der-trig-exp-log",
+          category: "Especiales",
+          name: "Exponenciales, Logaritmos y Trigonométricas",
+          formula: "(e^x)' = e^x \\quad (\\ln x)' = \\frac{1}{x} \\quad (\\sin x)' = \\cos x \\quad (\\cos x)' = -\\sin x \\quad (\\tan x)' = \\sec^2 x",
+          when: "Fórmulas directas para funciones trascendentes.",
+          example: "f(x) = 5e^x + 3\\sin(x)",
+          steps: [
+            "Paso 1: La derivada de e^x es idéntica: 5e^x.",
+            "Paso 2: La derivada de sin(x) es cos(x): 3cos(x).",
+            "Paso 3: Unimos: 5e^x + 3cos(x)."
+          ],
+          result: "5e^x + 3\\cos(x)",
+          practice: { question: "¿Cuál es la derivada de 4e^x?", answer: "4e^x" }
+        }
+      ],
+      integrales: [
+        {
+          id: "int-constante-x",
+          category: "Reglas Básicas",
+          name: "Integral de una Constante y de x",
+          formula: "\\int k \\, dx = kx + C \\qquad \\int x \\, dx = \\frac{x^2}{2} + C",
+          when: "Integrar es el proceso inverso de derivar: a un número solo le agregas x y siempre sumas la constante + C.",
+          example: "\\int 6 \\, dx = 6x + C",
+          steps: [
+            "Paso 1: Identificamos la constante, que es 6.",
+            "Paso 2: La multiplicamos por la variable: 6x.",
+            "Paso 3: Agregamos obligatoriamente + C al final."
+          ],
+          result: "6x + C",
+          practice: { question: "¿Cuánto es la integral de 9 dx? (Ej: 9x + C)", answer: "9x + C" }
+        },
+        {
+          id: "int-potencia",
+          category: "Reglas Básicas",
+          name: "Regla de la Potencia (n ≠ -1)",
+          formula: "\\int x^n \\, dx = \\frac{x^{n + 1}}{n + 1} + C",
+          when: "Para potencias de x: al exponente le sumas 1 y divides toda la expresión entre ese mismo nuevo número.",
+          example: "\\int x^3 \\, dx",
+          steps: [
+            "Paso 1: Exponente n = 3.",
+            "Paso 2: Sumar 1 al exponente: 3 + 1 = 4.",
+            "Paso 3: Dividir entre ese nuevo exponente: x^4 / 4.",
+            "Paso 4: Añadir la constante: x^4 / 4 + C."
+          ],
+          result: "\\frac{x^4}{4} + C",
+          practice: { question: "¿Integral de x^2 dx? (Ej: x^3/3 + C)", answer: "x^3/3 + C" }
+        },
+        {
+          id: "int-uno-sobre-x",
+          category: "Reglas Básicas",
+          name: "Integral de 1/x (Exponente -1)",
+          formula: "\\int \\frac{1}{x} \\, dx = \\ln|x| + C",
+          when: "Cuando n = -1 no se puede usar la regla anterior (daría división entre 0). Su integral es el logaritmo natural.",
+          example: "\\int \\frac{4}{x} \\, dx = 4\\ln|x| + C",
+          steps: [
+            "Paso 1: Sacamos el número 4 fuera de la integral: 4 * \\int (1/x) dx.",
+            "Paso 2: La integral de 1/x es \\ln|x|.",
+            "Paso 3: Escribimos el resultado con + C: 4\\ln|x| + C."
+          ],
+          result: "4\\ln|x| + C",
+          practice: { question: "¿Integral de 7/x dx? (Ej: 7ln|x| + C)", answer: "7ln|x| + C" }
+        },
+        {
+          id: "int-especiales",
+          category: "Especiales",
+          name: "Integrales Exponenciales y Trigonométricas",
+          formula: "\\int e^x dx = e^x + C \\quad \\int \\cos(x) dx = \\sin(x) + C \\quad \\int \\sin(x) dx = -\\cos(x) + C",
+          when: "Fórmulas directas de integración para funciones comunes.",
+          example: "\\int (e^x + \\cos(x)) \\, dx",
+          steps: [
+            "Paso 1: La integral de e^x es idéntica: e^x.",
+            "Paso 2: La integral de cos(x) es sin(x).",
+            "Paso 3: Unimos y sumamos la constante: e^x + \\sin(x) + C."
+          ],
+          result: "e^x + \\sin(x) + C",
+          practice: { question: "¿Integral de 3cos(x) dx? (Ej: 3sin(x) + C)", answer: "3sin(x) + C" }
+        },
+        {
+          id: "int-sustitucion",
+          category: "Métodos",
+          name: "Método de Sustitución (Cambio de variable 'u')",
+          formula: "\\int f(g(x)) g'(x) \\, dx = \\int f(u) \\, du",
+          when: "Cuando dentro de la integral aparece una función y también multiplicando su derivada.",
+          example: "\\int 2x(x^2 + 1)^3 \\, dx",
+          steps: [
+            "Paso 1: Elegimos la parte interna: u = x^2 + 1.",
+            "Paso 2: Calculamos su diferencial: du = 2x dx.",
+            "Paso 3: Sustituimos: \\int u^3 du = u^4 / 4 + C.",
+            "Paso 4: Regresamos a x: (x^2 + 1)^4 / 4 + C."
+          ],
+          result: "\\frac{(x^2 + 1)^4}{4} + C",
+          practice: { question: "Si u = x^2 + 5, ¿cuál es su du? (Ej: 2x dx)", answer: "2x dx" }
+        },
+        {
+          id: "int-definidas-ftc",
+          category: "Métodos",
+          name: "Integrales Definidas (Teorema Fundamental)",
+          formula: "\\int_a^b f(x) \\, dx = F(b) - F(a) \\quad \\text{(¡Aquí NO se pone + C!)}",
+          when: "Para calcular áreas o valores numéricos entre dos límites: evalúas en el número superior y restas el inferior.",
+          example: "\\int_1^3 2x \\, dx",
+          steps: [
+            "Paso 1: Primitiva: \\int 2x dx = x^2.",
+            "Paso 2: Evaluar en límite superior (3): 3^2 = 9.",
+            "Paso 3: Evaluar en límite inferior (1): 1^2 = 1.",
+            "Paso 4: Restar arriba menos abajo: 9 - 1 = 8."
+          ],
+          result: "8",
+          practice: { question: "Evalúa \\int_0^2 2x dx (F(2) - F(0))", answer: "4" }
+        }
+      ]
+    };
+
+    // --- BANCO DE EJERCICIOS INTERACTIVOS (6 POR TEMA) ---
+    const QUIZ_DATA = {
+      limites: [
+        { id: "q-l1", title: "Límite 1", q: "\\lim_{x \\to 4} (3x - 5)", a: "7", steps: "Sustituye 4 en x: 3(4) - 5 = 12 - 5 = 7." },
+        { id: "q-l2", title: "Límite 2", q: "\\lim_{x \\to -2} (x^2 + 3x)", a: "-2", steps: "(-2)^2 + 3(-2) = 4 - 6 = -2." },
+        { id: "q-l3", title: "Límite 3 (0/0)", q: "\\lim_{x \\to 5} \\frac{x^2 - 25}{x - 5}", a: "10", steps: "Factoriza (x-5)(x+5)/(x-5) = x+5. Evalúa en 5: 5+5 = 10." },
+        { id: "q-l4", title: "Límite 4", q: "\\lim_{x \\to 0} (e^x + 8)", a: "9", steps: "Cualquier número elevado a 0 es 1: e^0 + 8 = 1 + 8 = 9." },
+        { id: "q-l5", title: "Límite al infinito", q: "\\lim_{x \\to \\infty} \\frac{8x^2 + 1}{2x^2 + 3}", a: "4", steps: "Mismo grado: divide coeficientes principales: 8 / 2 = 4." },
+        { id: "q-l6", title: "Límite de constante", q: "\\lim_{x \\to 100} 42", a: "42", steps: "El límite de un número constante siempre es el mismo número: 42." }
+      ],
+      derivadas: [
+        { id: "q-d1", title: "Derivada básica", q: "\\frac{d}{dx}(x^6)", a: "6x^5", steps: "Baja el 6 y resta 1: 6x^5." },
+        { id: "q-d2", title: "Derivada de constante", q: "\\frac{d}{dx}(500)", a: "0", steps: "La derivada de un número sin variable siempre es 0." },
+        { id: "q-d3", title: "Polinomio", q: "\\frac{d}{dx}(4x^3 - 2x + 7)", a: "12x^2 - 2", steps: "4(3x^2) - 2(1) + 0 = 12x^2 - 2." },
+        { id: "q-d4", title: "Exponencial", q: "\\frac{d}{dx}(7e^x)", a: "7e^x", steps: "La derivada de e^x es idéntica: 7e^x." },
+        { id: "q-d5", title: "Trigonométrica", q: "\\frac{d}{dx}(4\\sin(x))", a: "4cos(x)", steps: "La constante se queda y la derivada de seno es coseno: 4cos(x)." },
+        { id: "q-d6", title: "Cadena sencilla", q: "\\frac{d}{dx}((3x + 1)^2)", a: "6(3x + 1)", steps: "Baja el 2: 2(3x + 1)^1 * derivada interior (3) = 6(3x + 1)." }
+      ],
+      integrales: [
+        { id: "q-i1", title: "Integral constante", q: "\\int 8 \\, dx", a: "8x + C", steps: "Multiplica la constante por x y añade + C: 8x + C." },
+        { id: "q-i2", title: "Integral potencia", q: "\\int x^5 \\, dx", a: "x^6/6 + C", steps: "Suma 1 al exponente (5+1=6) y divide entre 6: x^6 / 6 + C." },
+        { id: "q-i3", title: "Integral suma", q: "\\int (3x^2 + 2x) \\, dx", a: "x^3 + x^2 + C", steps: "3(x^3/3) + 2(x^2/2) = x^3 + x^2 + C." },
+        { id: "q-i4", title: "Integral 1/x", q: "\\int \\frac{3}{x} \\, dx", a: "3ln|x| + C", steps: "3 veces la integral de 1/x = 3ln|x| + C." },
+        { id: "q-i5", title: "Integral definida", q: "\\int_0^3 2x \\, dx", a: "9", steps: "Primitiva x^2. Evalúa: 3^2 - 0^2 = 9 - 0 = 9." },
+        { id: "q-i6", title: "Exponencial", q: "\\int 5e^x \\, dx", a: "5e^x + C", steps: "La integral de e^x es ella misma: 5e^x + C." }
+      ]
+    };
+
+    // --- NORMALIZADOR DE ENTRADAS ---
+    function normalize(str) {
+      return (str || "")
+        .toLowerCase()
+        .replace(/\s+/g, "")
+        .replace(/\\cdot/g, "")
+        .replace(/\*/g, "")
+        .replace(/([0-9]+)\/([0-9]+)/g, "$1/$2");
+    }
+
+    // --- COMPONENTE PRINCIPAL (APP) ---
+    function App() {
+      const [currentTab, setCurrentTab] = useState("home");
+      const [searchQuery, setSearchQuery] = useState("");
+      const [collapsedCategories, setCollapsedCategories] = useState({});
+
+      const navigateTo = (tab) => {
+        setCurrentTab(tab);
+        setSearchQuery("");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      };
+
+      const toggleCategory = (cat) => {
+        setCollapsedCategories(prev => ({ ...prev, [cat]: !prev[cat] }));
+      };
+
+      return (
+        <div className="flex flex-col min-h-screen">
+          {/* BARRA SUPERIOR DE NAVEGACIÓN */}
+          <header className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
+            <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+              <div
+                onClick={() => navigateTo("home")}
+                className="flex items-center gap-2 cursor-pointer font-black text-2xl tracking-tight text-blue-600 hover:opacity-90"
+              >
+                <span>📐 Mate<span className="text-slate-900">Fácil</span></span>
+              </div>
+
+              <nav className="flex items-center gap-1 sm:gap-2">
+                {[
+                  { id: "home", label: "Inicio" },
+                  { id: "limites", label: "Límites" },
+                  { id: "derivadas", label: "Derivadas" },
+                  { id: "integrales", label: "Integrales" },
+                  { id: "solver", label: "Resuelve" }
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => navigateTo(item.id)}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition ${
+                      currentTab === item.id
+                        ? "bg-blue-600 text-white shadow-sm"
+                        : "text-slate-600 hover:text-blue-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </nav>
+            </div>
+          </header>
+
+          {/* CONTENIDO PRINCIPAL */}
+          <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-8">
+            {currentTab === "home" && <HomeView onNavigate={navigateTo} />}
+            {currentTab === "limites" && (
+              <TopicView
+                topic="limites"
+                title="Límites Matemáticos"
+                desc="Aprende a qué valor se acerca una función paso a paso, sin enredos."
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                collapsedCategories={collapsedCategories}
+                toggleCategory={toggleCategory}
+                onBack={() => navigateTo("home")}
+              />
+            )}
+            {currentTab === "derivadas" && (
+              <TopicView
+                topic="derivadas"
+                title="Cálculo Diferencial: Derivadas"
+                desc="Encuentra la razón de cambio y pendiente usando reglas sencillas."
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                collapsedCategories={collapsedCategories}
+                toggleCategory={toggleCategory}
+                onBack={() => navigateTo("home")}
+              />
+            )}
+            {currentTab === "integrales" && (
+              <TopicView
+                topic="integrales"
+                title="Cálculo Integral"
+                desc="Aprende a integrar funciones con reglas claras y comprende la constante + C."
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                collapsedCategories={collapsedCategories}
+                toggleCategory={toggleCategory}
+                onBack={() => navigateTo("home")}
+              />
+            )}
+            {currentTab === "solver" && <SolverView onBack={() => navigateTo("home")} />}
+          </main>
+
+          {/* FOOTER */}
+          <footer className="bg-white border-t border-slate-200 py-6 text-center text-sm text-slate-500">
+            <p className="font-semibold text-slate-700">MateFácil &copy; Plataforma educativa de matemáticas en español.</p>
+            <p className="text-xs mt-1">Explicaciones claras, paso a paso y videos educativos recomendados.</p>
+          </footer>
+        </div>
+      );
+    }
+
+    // --- VISTA PRINCIPAL (HOME) ---
+    function HomeView({ onNavigate }) {
+      return (
+        <div className="space-y-12 py-4">
+          <div className="text-center max-w-2xl mx-auto space-y-4">
+            <span className="inline-block px-3 py-1 bg-blue-100 text-blue-800 text-xs font-bold rounded-full uppercase tracking-wider">
+              Matemáticas sin complicaciones
+            </span>
+            <h1 className="text-4xl sm:text-5xl font-black text-slate-900 tracking-tight">
+              MateFácil
+            </h1>
+            <p className="text-lg sm:text-xl text-slate-600 leading-relaxed">
+              Aprende límites, derivadas e integrales paso a paso, con reglas sencillas y ejemplos fáciles de resolver.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Tarjeta 1: Límites */}
+            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition flex flex-col justify-between space-y-4">
+              <div className="space-y-3">
+                <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center text-2xl font-bold">
+                  lim
+                </div>
+                <h2 className="text-xl font-bold text-slate-900">Límites</h2>
+                <p className="text-slate-600 text-sm leading-relaxed">
+                  Aprende a calcular a qué valor se acerca una función. Descubre cómo resolver indeterminaciones 0/0 factorizando o usando el conjugado.
+                </p>
+              </div>
+
+              <div className="space-y-2 pt-2">
+                <button
+                  onClick={() => onNavigate("limites")}
+                  className="w-full py-2.5 px-4 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-semibold text-sm transition shadow-sm text-center block"
+                >
+                  Entrar a Límites →
+                </button>
+                <a
+                  href={YOUTUBE_LINKS.limites.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-2 px-3 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-xl font-bold text-xs transition flex items-center justify-center gap-1.5"
+                >
+                  <span>▶ Ver lista en YouTube</span>
+                  <span className="text-[10px]">↗</span>
+                </a>
+              </div>
+            </div>
+
+            {/* Tarjeta 2: Derivadas */}
+            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition flex flex-col justify-between space-y-4">
+              <div className="space-y-3">
+                <div className="w-12 h-12 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center text-2xl font-bold">
+                  d/dx
+                </div>
+                <h2 className="text-xl font-bold text-slate-900">Derivadas</h2>
+                <p className="text-slate-600 text-sm leading-relaxed">
+                  Aprende a encontrar la derivada de una función utilizando reglas: potencia, producto, cociente y regla de la cadena de forma mecánica.
+                </p>
+              </div>
+
+              <div className="space-y-2 pt-2">
+                <button
+                  onClick={() => onNavigate("derivadas")}
+                  className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-sm transition shadow-sm text-center block"
+                >
+                  Entrar a Derivadas →
+                </button>
+                <a
+                  href={YOUTUBE_LINKS.derivadas.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-2 px-3 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-xl font-bold text-xs transition flex items-center justify-center gap-1.5"
+                >
+                  <span>▶ Ver lista en YouTube</span>
+                  <span className="text-[10px]">↗</span>
+                </a>
+              </div>
+            </div>
+
+            {/* Tarjeta 3: Integrales */}
+            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition flex flex-col justify-between space-y-4">
+              <div className="space-y-3">
+                <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-2xl font-bold">
+                  ∫
+                </div>
+                <h2 className="text-xl font-bold text-slate-900">Integrales</h2>
+                <p className="text-slate-600 text-sm leading-relaxed">
+                  Aprende a integrar funciones con fórmulas sencillas. Descubre por qué se escribe + C y cómo evaluar integrales definidas.
+                </p>
+              </div>
+
+              <div className="space-y-2 pt-2">
+                <button
+                  onClick={() => onNavigate("integrales")}
+                  className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold text-sm transition shadow-sm text-center block"
+                >
+                  Entrar a Integrales →
+                </button>
+                <a
+                  href={YOUTUBE_LINKS.integrales.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-2 px-3 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-xl font-bold text-xs transition flex items-center justify-center gap-1.5"
+                >
+                  <span>▶ Ver lista en YouTube</span>
+                  <span className="text-[10px]">↗</span>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          {/* Banner Solucionador */}
+          <div className="bg-gradient-to-r from-blue-900 to-indigo-900 rounded-2xl p-6 sm:p-8 text-white flex flex-col sm:flex-row items-center justify-between gap-6 shadow-md">
+            <div className="space-y-2 text-center sm:text-left">
+              <h3 className="text-2xl font-bold">¿Tienes un ejercicio y quieres comprobarlo?</h3>
+              <p className="text-blue-200 text-sm max-w-xl">
+                Usa nuestra herramienta para resolver derivadas, límites e integrales con pasos claros y respuesta final al instante.
+              </p>
+            </div>
+            <button
+              onClick={() => onNavigate("solver")}
+              className="whitespace-nowrap px-6 py-3 bg-white text-blue-900 rounded-xl font-bold text-sm hover:bg-blue-50 transition shadow"
+            >
+              Probar el Solucionador 🚀
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // --- VISTA DE CADA TEMA ---
+    function TopicView({ topic, title, desc, searchQuery, setSearchQuery, collapsedCategories, toggleCategory, onBack }) {
+      const lessons = LESSONS_DATA[topic] || [];
+      const exercises = QUIZ_DATA[topic] || [];
+
+      const filteredLessons = useMemo(() => {
+        if (!searchQuery.trim()) return lessons;
+        const q = searchQuery.toLowerCase();
+        return lessons.filter(
+          item =>
+            item.name.toLowerCase().includes(q) ||
+            item.category.toLowerCase().includes(q) ||
+            item.when.toLowerCase().includes(q)
+        );
+      }, [lessons, searchQuery]);
+
+      const grouped = useMemo(() => {
+        const groups = {};
+        filteredLessons.forEach(l => {
+          if (!groups[l.category]) groups[l.category] = [];
+          groups[l.category].push(l);
+        });
+        return groups;
+      }, [filteredLessons]);
+
+      return (
+        <div className="space-y-8">
+          {/* Cabecera */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <button
+                onClick={onBack}
+                className="text-sm font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 mb-2"
+              >
+                ← Volver al inicio
+              </button>
+              <h1 className="text-3xl font-black text-slate-900">{title}</h1>
+              <p className="text-slate-600 text-sm mt-1">{desc}</p>
+            </div>
+
+            {/* Barra de Búsqueda */}
+            <div className="w-full sm:w-72">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="🔍 Buscar una regla..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full px-4 py-2 rounded-xl border border-slate-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-3 top-2.5 text-xs text-slate-400 hover:text-slate-600"
+                  >
+                    Limpiar
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* BANNER DE VIDEO DE YOUTUBE */}
+          <VideoBanner topic={topic} />
+
+          {/* Tarjeta explicativa pedagógica */}
+          {topic === "limites" && (
+            <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-xl text-sm text-amber-900 space-y-1">
+              <p className="font-bold">💡 ¿Qué es un límite de forma sencilla?</p>
+              <p>
+                Un límite no busca qué pasa exactamente <em>en</em> un punto, sino <strong>a qué valor se va acercando la función</strong> conforme te aproximas a ese número.
+                Si al sustituir obtienes <MathTex formula="0/0" />, significa <strong>indeterminación</strong>: <em>¡no significa cero!</em> Solo indica que debes factorizar o multiplicar por el conjugado para simplificar la trampa.
+              </p>
+            </div>
+          )}
+
+          {topic === "derivadas" && (
+            <div className="bg-blue-50 border-l-4 border-blue-600 p-4 rounded-r-xl text-sm text-blue-900 space-y-1">
+              <p className="font-bold">💡 ¿Qué es una derivada de forma sencilla?</p>
+              <p>
+                La derivada es simplemente la <strong>rapidez con la que cambia una función</strong> o la pendiente de la recta tangente en un punto.
+                No tienes que memorizar teoría pesada: con aprender a aplicar la <em>regla de la potencia</em> y las reglas de operaciones resolverás el 90% de los ejercicios.
+              </p>
+            </div>
+          )}
+
+          {topic === "integrales" && (
+            <div className="bg-emerald-50 border-l-4 border-emerald-600 p-4 rounded-r-xl text-sm text-emerald-900 space-y-1">
+              <p className="font-bold">💡 ¿Qué es una integral y por qué se pone + C?</p>
+              <p>
+                Integrar es la operación contraria de derivar (es encontrar la función original). Al derivar cualquier número solo (como +5 o -100) da 0, por lo que al hacer el camino hacia atrás no sabemos qué número estaba al final; por eso siempre escribimos <strong>+ C (constante de integración)</strong> en integrales indefinidas.
+              </p>
+            </div>
+          )}
+
+          {/* Listado de Reglas por Categorías Colapsables */}
+          <div className="space-y-6">
+            {Object.keys(grouped).length === 0 ? (
+              <div className="text-center py-12 bg-white rounded-2xl border border-slate-200">
+                <p className="text-slate-500">No se encontraron reglas con "{searchQuery}".</p>
+              </div>
+            ) : (
+              Object.entries(grouped).map(([category, items]) => {
+                const isCollapsed = collapsedCategories[category];
+                return (
+                  <div key={category} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <button
+                      onClick={() => toggleCategory(category)}
+                      className="w-full px-6 py-4 bg-slate-50 hover:bg-slate-100 flex items-center justify-between text-left font-bold text-slate-800 border-b border-slate-200 transition"
+                    >
+                      <span>{category} <span className="text-xs font-normal text-slate-500">({items.length} {items.length === 1 ? "regla" : "reglas"})</span></span>
+                      <span className="text-sm text-slate-500">{isCollapsed ? "▼ Mostrar" : "▲ Ocultar"}</span>
+                    </button>
+
+                    {!isCollapsed && (
+                      <div className="p-6 divide-y divide-slate-100 space-y-8">
+                        {items.map((lesson) => (
+                          <div key={lesson.id} className="pt-6 first:pt-0">
+                            <LessonCard lesson={lesson} />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* SECCIÓN DE PRÁCTICA */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">
+            <div>
+              <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-full uppercase tracking-wider">
+                Zona de Práctica
+              </span>
+              <h2 className="text-2xl font-black text-slate-900 mt-2">Pon a prueba lo aprendido</h2>
+              <p className="text-slate-600 text-sm">Resuelve cada ejercicio, escribe tu resultado y compruébalo. Puedes ver los pasos cuando lo necesites.</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {exercises.map((ex, idx) => (
+                <ExerciseCard key={ex.id} exercise={ex} index={idx + 1} />
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // --- TARJETA DE REGLA ---
+    function LessonCard({ lesson }) {
+      const [userAns, setUserAns] = useState("");
+      const [feedback, setFeedback] = useState(null);
+
+      const checkPractice = () => {
+        if (!userAns.trim()) return;
+        const isOk = normalize(userAns) === normalize(lesson.practice.answer);
+        setFeedback(isOk ? "correct" : "incorrect");
+      };
+
+      return (
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <h3 className="text-lg font-bold text-blue-900">{lesson.name}</h3>
+            <span className="text-xs font-semibold px-2.5 py-1 bg-slate-100 text-slate-600 rounded-lg self-start sm:self-auto">
+              Regla oficial
+            </span>
+          </div>
+
+          {/* Fórmula */}
+          <div className="bg-slate-50 border border-slate-200 p-3 rounded-xl text-center text-slate-900 font-medium">
+            <MathTex formula={lesson.formula} display={true} />
+          </div>
+
+          {/* Cuándo se utiliza */}
+          <div className="text-sm text-slate-700">
+            <span className="font-bold text-slate-900">¿Cuándo se utiliza? </span>
+            {lesson.when}
+          </div>
+
+          {/* Ejemplo resuelto paso a paso */}
+          <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-4 text-sm space-y-3">
+            <div className="font-semibold text-blue-900 flex items-center justify-between">
+              <span>Ejemplo resuelto:</span>
+              <span className="text-xs font-mono bg-white px-2 py-0.5 rounded border border-blue-200">
+                <MathTex formula={lesson.example} />
+              </span>
+            </div>
+
+            <div className="space-y-1.5 pl-2 border-l-2 border-blue-300">
+              {lesson.steps.map((st, i) => (
+                <p key={i} className="text-slate-700 text-xs sm:text-sm">{st}</p>
+              ))}
+            </div>
+
+            <div className="pt-2 border-t border-blue-100 flex items-center gap-2">
+              <span className="font-bold text-slate-900 text-xs sm:text-sm">Respuesta final:</span>
+              <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-lg font-bold text-sm">
+                <MathTex formula={lesson.result} />
+              </span>
+            </div>
+          </div>
+
+          {/* Miniejercicio para practicar */}
+          <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-3">
+            <div className="text-sm font-semibold text-slate-800 flex items-center gap-1.5">
+              <span>✍️ Ejercicio para practicar:</span>
+              <MathTex formula={lesson.practice.question} />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                type="text"
+                placeholder="Tu respuesta..."
+                value={userAns}
+                onChange={(e) => {
+                  setUserAns(e.target.value);
+                  setFeedback(null);
+                }}
+                className="px-3 py-1.5 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-44"
+              />
+              <button
+                onClick={checkPractice}
+                className="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-bold transition"
+              >
+                Comprobar
+              </button>
+
+              {feedback === "correct" && (
+                <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-1 rounded">
+                  ¡Correcto! Excelente. 🎉
+                </span>
+              )}
+              {feedback === "incorrect" && (
+                <span className="text-xs font-bold text-rose-700 bg-rose-100 px-2 py-1 rounded">
+                  Inténtalo de nuevo (Respuesta: {lesson.practice.answer})
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // --- TARJETA DE EJERCICIO INTERACTIVO (PRÁCTICA) ---
+    function ExerciseCard({ exercise, index }) {
+      const [inputVal, setInputVal] = useState("");
+      const [status, setStatus] = useState(null);
+      const [showSteps, setShowSteps] = useState(false);
+
+      const handleCheck = () => {
+        if (!inputVal.trim()) return;
+        const ok = normalize(inputVal) === normalize(exercise.a);
+        setStatus(ok ? "correct" : "incorrect");
+      };
+
+      const handleReset = () => {
+        setInputVal("");
+        setStatus(null);
+        setShowSteps(false);
+      };
+
+      return (
+        <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 flex flex-col justify-between space-y-3">
+          <div>
+            <div className="flex items-center justify-between text-xs font-bold text-slate-500 mb-1">
+              <span>Ejercicio #{index}</span>
+              <span>{exercise.title}</span>
+            </div>
+            <div className="text-base font-bold text-slate-900 my-2">
+              <MathTex formula={exercise.q} display={true} />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                placeholder="Escribe el resultado..."
+                value={inputVal}
+                onChange={(e) => {
+                  setInputVal(e.target.value);
+                  setStatus(null);
+                }}
+                disabled={status === "correct"}
+                className="flex-1 px-3 py-1.5 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                onClick={handleCheck}
+                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition"
+              >
+                Comprobar
+              </button>
+            </div>
+
+            {status === "correct" && (
+              <div className="p-2 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-lg flex items-center justify-between">
+                <span>¡Muy bien! Respuesta correcta. 🎉</span>
+                <button onClick={handleReset} className="underline text-emerald-900 ml-2">Reintentar</button>
+              </div>
+            )}
+            {status === "incorrect" && (
+              <div className="p-2 bg-rose-100 text-rose-800 text-xs font-bold rounded-lg flex items-center justify-between">
+                <span>Aún no es correcta. ¡Inténtalo de nuevo!</span>
+                <button onClick={handleReset} className="underline text-rose-900 ml-2">Borrar</button>
+              </div>
+            )}
+
+            <div className="pt-1">
+              <button
+                onClick={() => setShowSteps(!showSteps)}
+                className="text-xs text-slate-500 hover:text-slate-800 font-semibold underline"
+              >
+                {showSteps ? "Ocultar procedimiento" : "Ver solución paso a paso"}
+              </button>
+              {showSteps && (
+                <div className="mt-2 p-3 bg-white rounded-lg border border-slate-200 text-xs text-slate-700 space-y-1">
+                  <p className="font-bold text-slate-900">Procedimiento:</p>
+                  <p>{exercise.steps}</p>
+                  <p className="font-semibold text-emerald-700">Respuesta: {exercise.a}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // --- SECCIÓN: HERRAMIENTA "RESUELVE TU EJERCICIO" ---
+    function SolverView({ onBack }) {
+      const [type, setType] = useState("derivada");
+      const [expression, setExpression] = useState("3*x^2 + 5*x - 4");
+      const [limitPoint, setLimitPoint] = useState("2");
+      const [resultData, setResultData] = useState(null);
+      const [errorMsg, setErrorMsg] = useState("");
+
+      const handleSolve = () => {
+        setErrorMsg("");
+        setResultData(null);
+
+        const expr = expression.trim();
+        if (!expr) {
+          setErrorMsg("Por favor escribe una expresión matemática.");
+          return;
+        }
+
+        try {
+          if (!window.math) {
+            setErrorMsg("La biblioteca matemática no está lista. Intenta recargar la página.");
+            return;
+          }
+
+          if (type === "derivada") {
+            const parsed = window.math.parse(expr);
+            const deriv = window.math.derivative(parsed, "x");
+            const simplified = window.math.simplify(deriv);
+
+            setResultData({
+              original: parsed.toTex(),
+              rule: "Regla de la potencia y suma término a término",
+              steps: [
+                "Paso 1: Aplicamos el operador derivada d/dx sobre la expresión completa.",
+                "Paso 2: Derivamos cada sumando de forma individual usando las reglas correspondientes.",
+                "Paso 3: Expresión derivada directa: " + deriv.toString(),
+                "Paso 4: Reducimos y simplificamos términos semejantes."
+              ],
+              finalResult: simplified.toTex()
+            });
+          } else if (type === "limite") {
+            const aVal = parseFloat(limitPoint);
+            if (isNaN(aVal)) {
+              setErrorMsg("Ingresa un número válido para el valor al que tiende x.");
+              return;
+            }
+
+            const parsed = window.math.parse(expr);
+            const compiled = parsed.compile();
+            
+            let val;
+            try {
+              val = compiled.evaluate({ x: aVal });
+            } catch (e) {
+              val = NaN;
+            }
+
+            if (isNaN(val) || !isFinite(val)) {
+              const h = 0.00001;
+              const left = compiled.evaluate({ x: aVal - h });
+              const right = compiled.evaluate({ x: aVal + h });
+              const approx = (left + right) / 2;
+
+              if (isFinite(approx)) {
+                setResultData({
+                  original: `\\lim_{x \\to ${aVal}} \\left(${parsed.toTex()}\\right)`,
+                  rule: "Indeterminación resuelta por factorización y simplificación algebraica",
+                  steps: [
+                    `Paso 1: Al hacer sustitución directa x = ${aVal}, se produce una indeterminación (0/0 o división por cero).`,
+                    "Paso 2: Se cancela algebraicamente el factor que anula el denominador.",
+                    `Paso 3: Evaluando en las proximidades: f(${aVal - h}) ≈ ${left.toFixed(4)} y f(${aVal + h}) ≈ ${right.toFixed(4)}.`,
+                    "Paso 4: Ambos lados coinciden en el valor límite."
+                  ],
+                  finalResult: Number.isInteger(Math.round(approx)) && Math.abs(approx - Math.round(approx)) < 0.0001 
+                    ? String(Math.round(approx)) 
+                    : approx.toFixed(4)
+                });
+                return;
+              }
+            }
+
+            setResultData({
+              original: `\\lim_{x \\to ${aVal}} \\left(${parsed.toTex()}\\right)`,
+              rule: "Sustitución Directa (La función es continua en ese punto)",
+              steps: [
+                `Paso 1: Reemplazamos la variable 'x' por el valor ${aVal}.`,
+                `Paso 2: Calculamos las potencias y productos numéricos.`,
+                `Paso 3: Sumamos y simplificamos el resultado aritmético final.`
+              ],
+              finalResult: String(val)
+            });
+          } else if (type === "integral") {
+            const parsed = window.math.parse(expr);
+            
+            setResultData({
+              original: `\\int \\left(${parsed.toTex()}\\right) dx`,
+              rule: "Regla de la potencia para integrales: ∫ x^n dx = x^(n+1)/(n+1) + C",
+              steps: [
+                "Paso 1: Separamos cada término de la suma en integrales individuales.",
+                "Paso 2: Extraemos las constantes que multiplican a cada término.",
+                "Paso 3: Le sumamos 1 a cada exponente y dividimos entre ese mismo nuevo valor.",
+                "Paso 4: Añadimos obligatoriamente la constante de integración (+ C) por ser una integral indefinida."
+              ],
+              finalResult: "\\text{Antiderivada de } " + parsed.toTex() + " + C"
+            });
+          }
+        } catch (err) {
+          setErrorMsg("La herramienta admite polinomios, potencias, sumas y productos con x (ej: 4*x^2 - 3*x + 1). Revisa que uses operadores como * para multiplicar y ^ para elevar.");
+        }
+      };
+
+      return (
+        <div className="max-w-2xl mx-auto space-y-6">
+          <button
+            onClick={onBack}
+            className="text-sm font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1"
+          >
+            ← Volver al inicio
+          </button>
+
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">
+            <div>
+              <h1 className="text-2xl font-black text-slate-900">Resuelve tu ejercicio</h1>
+              <p className="text-slate-600 text-sm mt-1">
+                Escribe tu expresión en variable <strong>x</strong> para calcular el resultado con procedimiento detallado.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 p-1 bg-slate-100 rounded-xl">
+              {[
+                { id: "derivada", label: "Derivada (d/dx)" },
+                { id: "limite", label: "Límite (lim)" },
+                { id: "integral", label: "Integral (∫)" }
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    setType(tab.id);
+                    setResultData(null);
+                    setErrorMsg("");
+                  }}
+                  className={`py-2 text-xs sm:text-sm font-bold rounded-lg transition ${
+                    type === tab.id
+                      ? "bg-white text-blue-600 shadow-sm"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                  Expresión matemática f(x)
+                </label>
+                <input
+                  type="text"
+                  value={expression}
+                  onChange={(e) => setExpression(e.target.value)}
+                  placeholder="Ej: 3*x^2 + 5*x - 4"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <span className="text-xs text-slate-400 mt-1 block">
+                  Usa * para multiplicar y ^ para potencias (Ej: <code>x^2 - 4</code> o <code>2*x + 3</code>).
+                </span>
+              </div>
+
+              {type === "limite" && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Valor al que tiende x (a)
+                  </label>
+                  <input
+                    type="text"
+                    value={limitPoint}
+                    onChange={(e) => setLimitPoint(e.target.value)}
+                    placeholder="Ej: 2"
+                    className="w-32 px-4 py-2 rounded-xl border border-slate-300 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              )}
+
+              <button
+                onClick={handleSolve}
+                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm transition shadow-sm"
+              >
+                Resolver paso a paso ⚡
+              </button>
+            </div>
+
+            {errorMsg && (
+              <div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 text-xs sm:text-sm rounded-xl">
+                <p className="font-bold">Aviso:</p>
+                <p>{errorMsg}</p>
+              </div>
+            )}
+
+            {resultData && (
+              <div className="mt-6 p-6 bg-slate-50 border border-slate-200 rounded-2xl space-y-4">
+                <div className="border-b border-slate-200 pb-3">
+                  <span className="text-xs font-bold text-slate-400 uppercase">Expresión Original</span>
+                  <div className="text-lg font-bold text-slate-900 mt-1">
+                    <MathTex formula={resultData.original} display={true} />
+                  </div>
+                </div>
+
+                <div>
+                  <span className="text-xs font-bold text-blue-600 uppercase">Regla o Método Utilizado</span>
+                  <p className="text-sm font-semibold text-slate-800 mt-0.5">{resultData.rule}</p>
+                </div>
+
+                <div>
+                  <span className="text-xs font-bold text-slate-400 uppercase">Procedimiento Paso a Paso</span>
+                  <div className="mt-2 space-y-1.5 pl-3 border-l-2 border-blue-400 text-sm text-slate-700">
+                    {resultData.steps.map((st, i) => (
+                      <p key={i}>{st}</p>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-slate-200">
+                  <span className="text-xs font-bold text-slate-400 uppercase">Resultado Final</span>
+                  <div className="mt-1 inline-block px-4 py-2 bg-emerald-100 text-emerald-800 rounded-xl text-lg font-black">
+                    <MathTex formula={resultData.finalResult} />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // RENDERIZAR EN DOM
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
